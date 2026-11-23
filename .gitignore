@@ -1,0 +1,16 @@
+target/
+*.class
+*.log
+
+src/test/resources/config.properties
+
+.idea/
+.metals/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+.DS_Store
+Thumbs.db
