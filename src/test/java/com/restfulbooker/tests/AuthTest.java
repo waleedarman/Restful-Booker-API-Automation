@@ -45,7 +45,7 @@ public class AuthTest {
         assertions.assertTrue(responseTime < MAX_RESPONSE_TIME_MILLIS,
                 "Expected response time under 2000 ms, got " + responseTime + " ms");
         assertions.assertAll("Invalid authentication response checks failed");
-        assertEquals(response.jsonPath().getString("reason"), "Deliberately incorrect expected reason",
+        assertEquals(response.jsonPath().getString("reason"), "Bad credentials",
                 "Expected documented authentication failure message");
 
         String token = response.jsonPath().getString("token");
