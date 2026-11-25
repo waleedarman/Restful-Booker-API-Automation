@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  main-tests:
+    name: Main Tests (8 unaffected tests)
+    runs-on: ubuntu-latest
+    env:
+      RESTFULBOOKER_USERNAME: ${{ secrets.RESTFULBOOKER_USERNAME }}
+      RESTFULBOOKER_PASSWORD: ${{ secrets.RESTFULBOOKER_PASSWORD }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Run Maven tests
+        run: mvn clean test '-Dtest=!BookingNegativeTest#postWithMissingRequiredFieldsIsRejected'
+
+      - name: Upload main test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: main-test-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
+
+  known-api-defect:
+    name: Known API Defect (non-blocking, failure reported)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      RESTFULBOOKER_USERNAME: ${{ secrets.RESTFULBOOKER_USERNAME }}
+      RESTFULBOOKER_PASSWORD: ${{ secrets.RESTFULBOOKER_PASSWORD }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Run documented API defect test
+        id: known-api-test
+        run: mvn clean test '-Dtest=BookingNegativeTest#postWithMissingRequiredFieldsIsRejected'
+
+      - name: Summarize known API defect result
+        if: always()
+        env:
+          TEST_OUTCOME: ${{ steps.known-api-test.outcome }}
+        run: |
+          {
+            echo '### Known API Defect test'
+            if [ "$TEST_OUTCOME" = "failure" ]; then
+              echo '- **Maven result: FAILED** (non-blocking documented upstream exception).'
+            else
+              echo "- **Maven result: $TEST_OUTCOME**."
+            fi
+            echo '- The original HTTP 400 assertion remains active. See the `known-api-defect-reports` artifact for the test report.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload known API defect reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: known-api-defect-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
